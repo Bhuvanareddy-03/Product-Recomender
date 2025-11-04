@@ -33,7 +33,7 @@ if uploaded_file:
         st.write("✅ Step 2 complete: Matrix shape", user_product_matrix.shape)
 
         if user_product_matrix.shape[0] < 2 or user_product_matrix.shape[1] < 2:
-            st.error("Not enough data to perform clustering.")
+            st.error("Not enough data to perform PCA.")
             st.stop()
 
         st.write("📈 Step 3: Scaling data")
@@ -51,10 +51,21 @@ if uploaded_file:
         reduced_data = pca.fit_transform(scaled_data)
         st.write("✅ Step 4 complete: PCA shape", reduced_data.shape)
 
-        st.success("🎉 All preprocessing steps completed successfully!")
+        # Explained variance ratio
+        explained = pca.explained_variance_ratio_
+        explained_df = pd.DataFrame({
+            'Principal Component': [f'PC{i+1}' for i in range(len(explained))],
+            'Explained Variance': explained
+        })
+        st.subheader("🔍 PCA Explained Variance Ratio")
+        st.dataframe(explained_df)
 
-        # Optional: show PCA variance
-        st.write("Explained variance ratio:", pca.explained_variance_ratio_)
+        # Cumulative variance chart
+        cumulative = np.cumsum(explained)
+        st.subheader("📈 Cumulative Explained Variance")
+        st.line_chart(cumulative)
+
+        st.success("🎉 All preprocessing steps completed successfully!")
 
     except Exception as e:
         st.error(f"❌ App failed at some step: {e}")
