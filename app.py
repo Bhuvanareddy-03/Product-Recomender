@@ -22,11 +22,7 @@ if uploaded_file:
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
         df.dropna(inplace=True)
 
-        # Preview
-        st.write("✅ File loaded successfully")
-        st.write("Shape:", df.shape)
-        st.write("Columns:", df.columns.tolist())
-        st.write(df.head())
+        
 
         # Sample and pivot
         df_sample = df.sample(n=min(10000, len(df)), random_state=42)
@@ -39,22 +35,37 @@ if uploaded_file:
             st.stop()
 
         # Standardize and reduce dimensions
-        scaler = StandardScaler()
-        scaled_data = scaler.fit_transform(user_product_matrix)
-        n_components = min(30, scaled_data.shape[1])
-        pca = PCA(n_components=n_components, random_state=42)
-        reduced_data = pca.fit_transform(scaled_data)
+        try:
+            scaler = StandardScaler()
+            scaled_data = scaler.fit_transform(user_product_matrix)
+            n_components = min(30, scaled_data.shape[1])
+            if n_components < 2:
+                st.error("Not enough product features for PCA.")
+                st.stop()
+            pca = PCA(n_components=n_components, random_state=42)
+            reduced_data = pca.fit_transform(scaled_data)
+        except Exception as e:
+            st.error(f"PCA failed: {e}")
+            st.stop()
 
         # Clustering
-        kmeans = MiniBatchKMeans(n_clusters=5, random_state=42, batch_size=512)
-        kmeans_labels = kmeans.fit_predict(reduced_data)
-        user_product_matrix['Cluster_KMeans'] = kmeans_labels
-        kmeans_score = silhouette_score(reduced_data, kmeans_labels)
+        try:
+            kmeans = MiniBatchKMeans(n_clusters=5, random_state=42, batch_size=512)
+            kmeans_labels = kmeans.fit_predict(reduced_data)
+            user_product_matrix['Cluster_KMeans'] = kmeans_labels
+            kmeans_score = silhouette_score(reduced_data, kmeans_labels)
+        except Exception as e:
+            st.error(f"KMeans failed: {e}")
+            st.stop()
 
-        hc = AgglomerativeClustering(n_clusters=5, linkage='ward')
-        hc_labels = hc.fit_predict(reduced_data)
-        user_product_matrix['Cluster_HC'] = hc_labels
-        hc_score = silhouette_score(reduced_data, hc_labels)
+        try:
+            hc = AgglomerativeClustering(n_clusters=5, linkage='ward')
+            hc_labels = hc.fit_predict(reduced_data)
+            user_product_matrix['Cluster_HC'] = hc_labels
+            hc_score = silhouette_score(reduced_data, hc_labels)
+        except Exception as e:
+            st.error(f"Hierarchical clustering failed: {e}")
+            st.stop()
 
         best_eps = None
         best_score = -1
