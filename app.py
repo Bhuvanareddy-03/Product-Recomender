@@ -6,10 +6,8 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering, DBSCAN
 from sklearn.metrics import silhouette_score
 
-# Title
 st.title("🛍️ Product Recommendation using Clustering")
 
-# Upload CSV
 uploaded_file = st.file_uploader("Upload your ratings CSV file", type=["csv"])
 if uploaded_file:
     try:
@@ -20,16 +18,27 @@ if uploaded_file:
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
         df.dropna(inplace=True)
 
+        # Preview
+        st.write("✅ Dataset loaded")
+        st.write(df.head())
+        st.write("Shape:", df.shape)
+
         # Sample and pivot
         df_sample = df.sample(n=10000, random_state=42)
         user_product_matrix = df_sample.pivot_table(index='userId',
                                                     columns='productId',
                                                     values='rating').fillna(0)
+        st.write("User–Product Matrix Shape:", user_product_matrix.shape)
+
+        # Sanity check
+        if user_product_matrix.shape[0] < 2 or user_product_matrix.shape[1] < 2:
+            st.error("Not enough data to perform clustering.")
+            st.stop()
 
         # Standardize and reduce dimensions
         scaler = StandardScaler()
         scaled_data = scaler.fit_transform(user_product_matrix)
-        pca = PCA(n_components=30, random_state=42)
+        pca = PCA(n_components=min(30, scaled_data.shape[1]), random_state=42)
         reduced_data = pca.fit_transform(scaled_data)
 
         # Clustering
@@ -100,35 +109,31 @@ if uploaded_file:
         def recommend_products(user_id, cluster_label_col):
             if cluster_label_col not in user_product_matrix.columns:
                 return f"Selected model '{cluster_label_col}' did not produce valid clusters."
-
             if user_id not in user_product_matrix.index:
                 return "User ID not found in the data sample."
-
             user_cluster = user_product_matrix.loc[user_id, cluster_label_col]
             cluster_users = user_product_matrix[user_product_matrix[cluster_label_col] == user_cluster]
-
             if cluster_users.shape[0] < 2:
                 return f"No similar users found in cluster {user_cluster}."
-
             cluster_users = cluster_users.drop(columns=['Cluster_KMeans', 'Cluster_HC', 'Cluster_DBSCAN'], errors='ignore')
             mean_ratings = cluster_users.mean().sort_values(ascending=False)
-
             if mean_ratings.empty:
                 return "No product ratings available in this cluster."
-
             return mean_ratings.head(5)
 
         # Recommendation section
         st.subheader("🎯 Get Recommendations")
         selected_user = st.selectbox("Select a User ID", user_product_matrix.index)
-
         if st.button("Recommend Products"):
-            recommendations = recommend_products(selected_user, cluster_label_col=model_choice)
-            if isinstance(recommendations, str):
-                st.warning(recommendations)
-            else:
-                st.write(f"Top recommended products for user {selected_user}:")
-                st.dataframe(recommendations)
+            try:
+                recommendations = recommend_products(selected_user, cluster_label_col=model_choice)
+                if isinstance(recommendations, str):
+                    st.warning(recommendations)
+                else:
+                    st.write(f"Top recommended products for user {selected_user}:")
+                    st.dataframe(recommendations)
+            except Exception as e:
+                st.error(f"Error generating recommendations: {e}")
 
     except Exception as e:
-        st.error(f"An error occurred while running the app: {e}")
+        st.error(f"App failed to run: {e}")
