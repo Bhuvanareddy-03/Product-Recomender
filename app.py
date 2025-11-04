@@ -73,15 +73,16 @@ if uploaded_file:
         user_product_matrix['Cluster_HC'] = hc_labels
         hc_score = silhouette_score(reduced_data, hc_labels)
 
-        # Sidebar model selection
-        st.sidebar.header("🔧 Model Selection")
-        model_choice = st.sidebar.selectbox(
-            "Choose clustering model",
-            ['Cluster_KMeans', 'Cluster_HC'],
-            index=0
-        )
+        # Step 6: Dynamic model selection
+        available_models = [col for col in ['Cluster_KMeans', 'Cluster_HC'] if col in user_product_matrix.columns]
+        if not available_models:
+            st.error("No clustering models available for selection.")
+            st.stop()
 
-        # Recommendation logic (safe version)
+        st.sidebar.header("🔧 Model Selection")
+        model_choice = st.sidebar.selectbox("Choose clustering model", available_models)
+
+        # Step 7: Recommendation logic
         def recommend_products(user_id, cluster_label_col):
             if cluster_label_col not in user_product_matrix.columns:
                 return f"Selected model '{cluster_label_col}' did not produce valid clusters."
@@ -94,7 +95,7 @@ if uploaded_file:
             if cluster_users.shape[0] < 2:
                 return f"No similar users found in cluster {user_cluster}."
 
-            cluster_users = cluster_users.drop(columns=['Cluster_KMeans', 'Cluster_HC'], errors='ignore')
+            cluster_users = cluster_users.drop(columns=available_models, errors='ignore')
             cluster_users = cluster_users.apply(pd.to_numeric, errors='coerce')
             cluster_users = cluster_users.dropna(axis=1, how='all')
 
@@ -107,7 +108,7 @@ if uploaded_file:
 
             return mean_ratings.head(5)
 
-        # Recommendation section
+        # Step 8: Recommendation section
         st.subheader("🎯 Get Recommendations")
         selected_user = st.selectbox("Select a User ID", user_product_matrix.index)
         if st.button("Recommend Products"):
@@ -121,7 +122,7 @@ if uploaded_file:
             except Exception as e:
                 st.error(f"Error generating recommendations: {e}")
 
-        # Model comparison
+        # Step 9: Model comparison
         model_scores = {
             'Cluster_KMeans': kmeans_score,
             'Cluster_HC': hc_score
