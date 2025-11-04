@@ -11,12 +11,22 @@ st.title("🛍️ Product Recommendation using Clustering")
 uploaded_file = st.file_uploader("Upload your ratings CSV file", type=["csv"])
 if uploaded_file:
     try:
-        # Load and clean data
-        df = pd.read_csv(uploaded_file, header=None)
+        # Load CSV with header detection
+        df = pd.read_csv(uploaded_file)
+        if df.shape[1] != 4:
+            st.error("Uploaded file must have exactly 4 columns: userId, productId, rating, timestamp.")
+            st.stop()
+
         df.columns = ['userId', 'productId', 'rating', 'timestamp']
         df.drop(columns=['timestamp'], inplace=True)
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
         df.dropna(inplace=True)
+
+        # Preview
+        st.write("✅ File loaded successfully")
+        st.write("Shape:", df.shape)
+        st.write("Columns:", df.columns.tolist())
+        st.write(df.head())
 
         # Sample and pivot
         df_sample = df.sample(n=min(10000, len(df)), random_state=42)
