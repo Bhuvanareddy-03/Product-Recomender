@@ -81,20 +81,30 @@ if uploaded_file:
             index=0
         )
 
-        # Recommendation logic
+        # Recommendation logic (safe version)
         def recommend_products(user_id, cluster_label_col):
             if cluster_label_col not in user_product_matrix.columns:
                 return f"Selected model '{cluster_label_col}' did not produce valid clusters."
             if user_id not in user_product_matrix.index:
                 return "User ID not found in the data sample."
+
             user_cluster = user_product_matrix.loc[user_id, cluster_label_col]
             cluster_users = user_product_matrix[user_product_matrix[cluster_label_col] == user_cluster]
+
             if cluster_users.shape[0] < 2:
                 return f"No similar users found in cluster {user_cluster}."
+
             cluster_users = cluster_users.drop(columns=['Cluster_KMeans', 'Cluster_HC'], errors='ignore')
+            cluster_users = cluster_users.apply(pd.to_numeric, errors='coerce')
+            cluster_users = cluster_users.dropna(axis=1, how='all')
+
+            if cluster_users.empty:
+                return "No product ratings available in this cluster."
+
             mean_ratings = cluster_users.mean().sort_values(ascending=False)
             if mean_ratings.empty:
-                return "No product ratings available in this cluster."
+                return "No product ratings found after averaging."
+
             return mean_ratings.head(5)
 
         # Recommendation section
