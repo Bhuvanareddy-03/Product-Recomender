@@ -13,9 +13,6 @@ if uploaded_file:
     try:
         # Load and clean data
         df = pd.read_csv(uploaded_file, header=None)
-        if df.shape[1] != 4:
-            st.error("Expected 4 columns: userId, productId, rating, timestamp.")
-            st.stop()
         df.columns = ['userId', 'productId', 'rating', 'timestamp']
         df.drop(columns=['timestamp'], inplace=True)
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
@@ -53,17 +50,20 @@ if uploaded_file:
         best_score = -1
         best_labels = None
         for eps in [0.3, 0.5, 1, 1.5, 2, 3]:
-            dbscan = DBSCAN(eps=eps, min_samples=5)
-            db_labels = dbscan.fit_predict(reduced_data)
-            n_clusters = len(set(db_labels)) - (1 if -1 in db_labels else 0)
-            if n_clusters > 1:
-                mask = db_labels != -1
-                if mask.sum() > 1:
-                    score = silhouette_score(reduced_data[mask], db_labels[mask])
-                    if score > best_score:
-                        best_score = score
-                        best_eps = eps
-                        best_labels = db_labels
+            try:
+                dbscan = DBSCAN(eps=eps, min_samples=5)
+                db_labels = dbscan.fit_predict(reduced_data)
+                n_clusters = len(set(db_labels)) - (1 if -1 in db_labels else 0)
+                if n_clusters > 1:
+                    mask = db_labels != -1
+                    if mask.sum() > 1:
+                        score = silhouette_score(reduced_data[mask], db_labels[mask])
+                        if score > best_score:
+                            best_score = score
+                            best_eps = eps
+                            best_labels = db_labels
+            except:
+                continue
 
         if best_labels is not None:
             user_product_matrix['Cluster_DBSCAN'] = best_labels
