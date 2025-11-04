@@ -6,6 +6,7 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
+st.set_page_config(page_title="Clustering Recommender", layout="wide")
 st.title("🛍️ Product Recommendation using Clustering")
 
 uploaded_file = st.file_uploader("Upload your ratings CSV file", type=["csv"])
@@ -62,16 +63,24 @@ if uploaded_file:
         st.line_chart(cumulative)
 
         # Step 4: KMeans clustering
-        kmeans = MiniBatchKMeans(n_clusters=5, random_state=42, batch_size=512)
-        kmeans_labels = kmeans.fit_predict(reduced_data)
-        user_product_matrix['Cluster_KMeans'] = kmeans_labels
-        kmeans_score = silhouette_score(reduced_data, kmeans_labels)
+        try:
+            kmeans = MiniBatchKMeans(n_clusters=5, random_state=42, batch_size=512)
+            kmeans_labels = kmeans.fit_predict(reduced_data)
+            user_product_matrix['Cluster_KMeans'] = kmeans_labels
+            kmeans_score = silhouette_score(reduced_data, kmeans_labels)
+        except Exception as e:
+            st.warning(f"KMeans clustering failed: {e}")
+            kmeans_score = "N/A"
 
         # Step 5: Hierarchical clustering
-        hc = AgglomerativeClustering(n_clusters=5, linkage='ward')
-        hc_labels = hc.fit_predict(reduced_data)
-        user_product_matrix['Cluster_HC'] = hc_labels
-        hc_score = silhouette_score(reduced_data, hc_labels)
+        try:
+            hc = AgglomerativeClustering(n_clusters=5, linkage='ward')
+            hc_labels = hc.fit_predict(reduced_data)
+            user_product_matrix['Cluster_HC'] = hc_labels
+            hc_score = silhouette_score(reduced_data, hc_labels)
+        except Exception as e:
+            st.warning(f"Hierarchical clustering failed: {e}")
+            hc_score = "N/A"
 
         # Step 6: Dynamic model selection
         available_models = [col for col in ['Cluster_KMeans', 'Cluster_HC'] if col in user_product_matrix.columns]
@@ -110,17 +119,20 @@ if uploaded_file:
 
         # Step 8: Recommendation section
         st.subheader("🎯 Get Recommendations")
-        selected_user = st.selectbox("Select a User ID", user_product_matrix.index)
-        if st.button("Recommend Products"):
-            try:
-                recommendations = recommend_products(selected_user, cluster_label_col=model_choice)
-                if isinstance(recommendations, str):
-                    st.warning(recommendations)
-                else:
-                    st.write(f"Top recommended products for user {selected_user}:")
-                    st.dataframe(recommendations)
-            except Exception as e:
-                st.error(f"Error generating recommendations: {e}")
+        if not user_product_matrix.empty:
+            selected_user = st.selectbox("Select a User ID", user_product_matrix.index)
+            if st.button("Recommend Products"):
+                try:
+                    recommendations = recommend_products(selected_user, cluster_label_col=model_choice)
+                    if isinstance(recommendations, str):
+                        st.warning(recommendations)
+                    else:
+                        st.write(f"Top recommended products for user {selected_user}:")
+                        st.dataframe(recommendations)
+                except Exception as e:
+                    st.error(f"Error generating recommendations: {e}")
+        else:
+            st.warning("User-product matrix is empty. Cannot generate recommendations.")
 
         # Step 9: Model comparison
         model_scores = {
