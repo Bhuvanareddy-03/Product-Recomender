@@ -82,7 +82,10 @@ if uploaded_file:
             st.warning(f"Hierarchical clustering failed: {e}")
             hc_score = "N/A"
 
-        # Step 6: Dynamic model selection
+        # Step 6: Store matrix in session state
+        st.session_state['user_product_matrix'] = user_product_matrix.copy()
+
+        # Step 7: Dynamic model selection
         available_models = [col for col in ['Cluster_KMeans', 'Cluster_HC'] if col in user_product_matrix.columns]
         if not available_models:
             st.error("No clustering models available for selection.")
@@ -91,15 +94,15 @@ if uploaded_file:
         st.sidebar.header("🔧 Model Selection")
         model_choice = st.sidebar.selectbox("Choose clustering model", available_models)
 
-        # Step 7: Recommendation logic
-        def recommend_products(user_id, cluster_label_col):
-            if cluster_label_col not in user_product_matrix.columns:
+        # Step 8: Recommendation logic
+        def recommend_products(user_id, cluster_label_col, matrix):
+            if cluster_label_col not in matrix.columns:
                 return f"Selected model '{cluster_label_col}' did not produce valid clusters."
-            if user_id not in user_product_matrix.index:
+            if user_id not in matrix.index:
                 return "User ID not found in the data sample."
 
-            user_cluster = user_product_matrix.loc[user_id, cluster_label_col]
-            cluster_users = user_product_matrix[user_product_matrix[cluster_label_col] == user_cluster]
+            user_cluster = matrix.loc[user_id, cluster_label_col]
+            cluster_users = matrix[matrix[cluster_label_col] == user_cluster]
 
             if cluster_users.shape[0] < 2:
                 return f"No similar users found in cluster {user_cluster}."
@@ -117,13 +120,14 @@ if uploaded_file:
 
             return mean_ratings.head(5)
 
-        # Step 8: Recommendation section
+        # Step 9: Recommendation section
         st.subheader("🎯 Get Recommendations")
-        if not user_product_matrix.empty:
-            selected_user = st.selectbox("Select a User ID", user_product_matrix.index)
+        if 'user_product_matrix' in st.session_state:
+            matrix = st.session_state['user_product_matrix']
+            selected_user = st.selectbox("Select a User ID", matrix.index)
             if st.button("Recommend Products"):
                 try:
-                    recommendations = recommend_products(selected_user, cluster_label_col=model_choice)
+                    recommendations = recommend_products(selected_user, cluster_label_col=model_choice, matrix=matrix)
                     if isinstance(recommendations, str):
                         st.warning(recommendations)
                     else:
@@ -132,9 +136,9 @@ if uploaded_file:
                 except Exception as e:
                     st.error(f"Error generating recommendations: {e}")
         else:
-            st.warning("User-product matrix is empty. Cannot generate recommendations.")
+            st.warning("User-product matrix is not available. Please upload a file and run clustering first.")
 
-        # Step 9: Model comparison
+        # Step 10: Model comparison
         model_scores = {
             'Cluster_KMeans': kmeans_score,
             'Cluster_HC': hc_score
