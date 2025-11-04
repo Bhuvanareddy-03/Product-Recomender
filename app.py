@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
+from sklearn.metrics import silhouette_score
 
 st.title("🛍️ Product Recommendation Diagnostic Mode")
 
@@ -60,12 +62,43 @@ if uploaded_file:
         st.subheader("🔍 PCA Explained Variance Ratio")
         st.dataframe(explained_df)
 
-        # Cumulative variance chart
         cumulative = np.cumsum(explained)
         st.subheader("📈 Cumulative Explained Variance")
         st.line_chart(cumulative)
 
-        st.success("🎉 All preprocessing steps completed successfully!")
+        st.write("🔁 Step 5: KMeans clustering")
+        try:
+            kmeans = MiniBatchKMeans(n_clusters=5, random_state=42, batch_size=512)
+            kmeans_labels = kmeans.fit_predict(reduced_data)
+            user_product_matrix['Cluster_KMeans'] = kmeans_labels
+            if len(set(kmeans_labels)) > 1:
+                kmeans_score = silhouette_score(reduced_data, kmeans_labels)
+            else:
+                kmeans_score = "Only one cluster found"
+            st.write("✅ KMeans clustering complete")
+            st.write("KMeans labels:", np.unique(kmeans_labels))
+            st.write("KMeans score:", kmeans_score)
+        except Exception as e:
+            st.error(f"KMeans failed: {e}")
+            st.stop()
+
+        st.write("🔁 Step 6: Hierarchical clustering")
+        try:
+            hc = AgglomerativeClustering(n_clusters=5, linkage='ward')
+            hc_labels = hc.fit_predict(reduced_data)
+            user_product_matrix['Cluster_HC'] = hc_labels
+            if len(set(hc_labels)) > 1:
+                hc_score = silhouette_score(reduced_data, hc_labels)
+            else:
+                hc_score = "Only one cluster found"
+            st.write("✅ Hierarchical clustering complete")
+            st.write("HC labels:", np.unique(hc_labels))
+            st.write("HC score:", hc_score)
+        except Exception as e:
+            st.error(f"Hierarchical clustering failed: {e}")
+            st.stop()
+
+        st.success("🎉 Clustering steps completed successfully!")
 
     except Exception as e:
         st.error(f"❌ App failed at some step: {e}")
