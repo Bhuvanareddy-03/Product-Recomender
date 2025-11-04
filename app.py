@@ -89,11 +89,12 @@ if uploaded_file:
     st.subheader("📈 Model Comparison")
     st.dataframe(pd.DataFrame(model_scores.items(), columns=['Model', 'Silhouette Score']))
 
-    # Sidebar model selection
+    # Sidebar model selection with best model button
     st.sidebar.header("🔧 Model Selection")
-    model_choice = st.sidebar.selectbox("Choose clustering model", ['Cluster_KMeans', 'Cluster_HC', 'Cluster_DBSCAN'])
 
-    # Button to show best model
+    if 'best_model' not in st.session_state:
+        st.session_state['best_model'] = 'Cluster_KMeans'
+
     if st.sidebar.button("📌 Show Best Model"):
         scores = {
             'Cluster_KMeans': kmeans_score,
@@ -101,8 +102,14 @@ if uploaded_file:
             'Cluster_DBSCAN': best_score if best_labels is not None else -1
         }
         best_model = max(scores, key=lambda k: scores[k] if isinstance(scores[k], float) else -1)
+        st.session_state['best_model'] = best_model
         st.sidebar.success(f"Best model: {best_model} (Score: {scores[best_model]:.3f})")
-        model_choice = best_model
+
+    model_choice = st.sidebar.selectbox(
+        "Choose clustering model",
+        ['Cluster_KMeans', 'Cluster_HC', 'Cluster_DBSCAN'],
+        index=['Cluster_KMeans', 'Cluster_HC', 'Cluster_DBSCAN'].index(st.session_state['best_model'])
+    )
 
     # Recommendation logic
     def recommend_products(user_id, cluster_label_col):
