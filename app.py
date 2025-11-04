@@ -13,24 +13,20 @@ if uploaded_file:
     try:
         # Load and clean data
         df = pd.read_csv(uploaded_file, header=None)
+        if df.shape[1] != 4:
+            st.error("Expected 4 columns: userId, productId, rating, timestamp.")
+            st.stop()
         df.columns = ['userId', 'productId', 'rating', 'timestamp']
         df.drop(columns=['timestamp'], inplace=True)
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
         df.dropna(inplace=True)
 
-        # Preview
-        st.write("✅ Dataset loaded")
-        st.write(df.head())
-        st.write("Shape:", df.shape)
-
         # Sample and pivot
-        df_sample = df.sample(n=10000, random_state=42)
+        df_sample = df.sample(n=min(10000, len(df)), random_state=42)
         user_product_matrix = df_sample.pivot_table(index='userId',
                                                     columns='productId',
                                                     values='rating').fillna(0)
-        st.write("User–Product Matrix Shape:", user_product_matrix.shape)
 
-        # Sanity check
         if user_product_matrix.shape[0] < 2 or user_product_matrix.shape[1] < 2:
             st.error("Not enough data to perform clustering.")
             st.stop()
@@ -38,7 +34,8 @@ if uploaded_file:
         # Standardize and reduce dimensions
         scaler = StandardScaler()
         scaled_data = scaler.fit_transform(user_product_matrix)
-        pca = PCA(n_components=min(30, scaled_data.shape[1]), random_state=42)
+        n_components = min(30, scaled_data.shape[1])
+        pca = PCA(n_components=n_components, random_state=42)
         reduced_data = pca.fit_transform(scaled_data)
 
         # Clustering
