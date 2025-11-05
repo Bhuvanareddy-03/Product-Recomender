@@ -20,6 +20,10 @@ if uploaded_file:
             chunk.columns = [col.strip().lower() for col in chunk.columns]
             if {'userid', 'productid', 'rating', 'date'}.issubset(set(chunk.columns)):
                 df_list.append(chunk[['userid', 'productid', 'rating', 'date']])
+        if not df_list:
+            st.error("No valid data found in file.")
+            st.stop()
+
         df = pd.concat(df_list, ignore_index=True)
 
         # Clean and sample
