@@ -45,7 +45,7 @@ def load_and_cluster(df):
 
     # Convert timestamp if present
     if 'time_stamp' in df.columns:
-         df['time_stamp'] = pd.to_datetime(df['time_stamp'], unit='s', errors='coerce')dt.date
+         df['time_stamp'] = pd.to_datetime(df['time_stamp'], unit='s', errors='coerce').dt.date
 
    
     df.dropna(subset=['userid', 'productid', 'rating'], inplace=True)
