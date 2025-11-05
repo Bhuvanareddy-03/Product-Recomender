@@ -13,38 +13,43 @@ st.title("🔗 Product Recommendation using Hierarchical Clustering")
 uploaded_file = st.file_uploader("Upload your ratings CSV file", type=["csv"])
 if uploaded_file:
     try:
+        # Load and clean column names
         df_raw = pd.read_csv(uploaded_file)
-        df = df_raw.copy()
-        if df.shape[1] != 4:
-            st.error("File must have 4 columns: userId, productId, rating, timestamp")
+        df_raw.columns = [col.strip().lower() for col in df_raw.columns]
+        required_cols = {'userid', 'productid', 'rating', 'timestamp'}
+        if not required_cols.issubset(set(df_raw.columns)):
+            st.error(f"Missing required columns. Found: {df_raw.columns.tolist()}")
             st.stop()
 
-      
+        # Preprocess
+        df = df_raw.copy()
+        df.drop(columns=['timestamp'], inplace=True)
+        df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
+        df.dropna(inplace=True)
 
-        # Smart sampling for large data
+        # Smart sampling
         if len(df) > 20000:
             df = df.sample(n=20000, random_state=42)
 
-        matrix = df.pivot_table(index='userId', columns='productId', values='rating').fillna(0)
+        matrix = df.pivot_table(index='userid', columns='productid', values='rating').fillna(0)
         if matrix.shape[0] < 2 or matrix.shape[1] < 2:
             st.error("Not enough data for clustering.")
             st.stop()
 
+        # Scale and reduce
         scaler = StandardScaler()
         scaled_data = scaler.fit_transform(matrix)
 
-        # PCA for clustering
         pca = PCA(n_components=min(30, scaled_data.shape[1]), random_state=42)
         reduced_data = pca.fit_transform(scaled_data)
 
-        # PCA for visualization
         pca_vis = PCA(n_components=2, random_state=42)
         vis_data = pca_vis.fit_transform(scaled_data)
 
         # Hierarchical Clustering
         hc = AgglomerativeClustering(n_clusters=5, linkage='ward')
         hc_labels = hc.fit_predict(reduced_data)
-        matrix['Cluster_HC'] = hc_labels
+        matrix['cluster_hc'] = hc_labels
 
         # Silhouette Score
         try:
@@ -74,18 +79,18 @@ if uploaded_file:
 
         # Recommendation logic
         def recommend_products(user_id, matrix):
-            if 'Cluster_HC' not in matrix.columns:
+            if 'cluster_hc' not in matrix.columns:
                 return "Model not found."
             if user_id not in matrix.index:
                 return "User ID not found."
 
-            user_cluster = matrix.loc[user_id, 'Cluster_HC']
-            cluster_users = matrix[matrix['Cluster_HC'] == user_cluster]
+            user_cluster = matrix.loc[user_id, 'cluster_hc']
+            cluster_users = matrix[matrix['cluster_hc'] == user_cluster]
 
             if cluster_users.shape[0] < 2:
                 return f"No similar users in cluster {user_cluster}."
 
-            cluster_users = cluster_users.drop(columns=['Cluster_HC'], errors='ignore')
+            cluster_users = cluster_users.drop(columns=['cluster_hc'], errors='ignore')
             cluster_users = cluster_users.apply(pd.to_numeric, errors='coerce')
             cluster_users = cluster_users.dropna(axis=1, how='all')
 
