@@ -6,19 +6,23 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
+# Page setup
 st.set_page_config(page_title="🔗 Product Recommender", layout="centered")
 st.title("🔗 Scalable Product Recommendation using Hierarchical Clustering")
 st.write("Upload your ratings CSV file")
 
+# File upload
 uploaded_file = st.file_uploader("Upload ratings_short.csv", type="csv")
 
+# Data overview
 def show_data_overview(df):
     st.subheader("📊 Data Overview")
-    
     st.write("**Sample Data:**")
     st.dataframe(df.head())
 
+# Clustering pipeline
 def load_and_cluster(df):
+    # Normalize column names
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
 
     required_cols = {'userid', 'productid', 'rating'}
@@ -26,24 +30,34 @@ def load_and_cluster(df):
         st.error("❌ CSV must contain 'userid', 'productid', and 'rating' columns.")
         return None, None, None
 
+    # Convert rating to numeric
     df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
+
+    # Convert timestamp if present
+    if 'time_stamp' in df.columns:
+        df['time_stamp'] = pd.to_datetime(df['time_stamp'], unit='s')
+
     df.dropna(subset=['userid', 'productid', 'rating'], inplace=True)
 
     show_data_overview(df)
 
+    # Sample for memory efficiency
     df_sample = df.sample(n=min(3000, len(df)), random_state=42)
     matrix = df_sample.pivot_table(index='userid', columns='productid', values='rating').fillna(0)
 
+    # Scale and reduce dimensions
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(matrix)
 
     pca = PCA(n_components=min(30, scaled_data.shape[1]), random_state=42)
     reduced_data = pca.fit_transform(scaled_data)
 
+    # Hierarchical clustering
     hc = AgglomerativeClustering(n_clusters=5, linkage='ward')
     hc_labels = hc.fit_predict(reduced_data)
     matrix['cluster_hc'] = hc_labels
 
+    # Silhouette score
     try:
         score = silhouette_score(reduced_data, hc_labels)
     except Exception as e:
@@ -52,6 +66,7 @@ def load_and_cluster(df):
 
     return matrix, hc_labels, score
 
+# Recommendation logic
 def recommend_products(user_id, matrix):
     if user_id not in matrix.index:
         return ["User ID not found."]
@@ -68,6 +83,7 @@ def recommend_products(user_id, matrix):
     mean_ratings = cluster_users.mean().sort_values(ascending=False)
     return mean_ratings.head(5).to_dict()
 
+# Main app logic
 if uploaded_file:
     try:
         df = pd.read_csv(uploaded_file)
