@@ -18,12 +18,14 @@ uploaded_file = st.file_uploader("Upload ratings_short.csv", type="csv")
 def show_data_overview(df):
     st.subheader("📊 Data Overview")
      # Show sample with readable timestamp if present
+     # Show sample with readable timestamp if present
     if 'time_stamp' in df.columns:
         st.write("**Sample Data with Timestamp:**")
         st.dataframe(df[['userid', 'productid', 'rating', 'time_stamp']].head())
-     else:
+    else:
         st.write("**Sample Data:**")
         st.dataframe(df[['userid', 'productid', 'rating']].head())
+
 
 
     
