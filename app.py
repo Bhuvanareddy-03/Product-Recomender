@@ -16,7 +16,7 @@ if uploaded_file:
         # Load and normalize column names
         df_raw = pd.read_csv(uploaded_file)
         df_raw.columns = [col.strip().lower() for col in df_raw.columns]
-        required_cols = {'userid', 'productid', 'rating', 'timestamp'}
+        required_cols = {'userid', 'productid', 'rating', 'date'}
         missing = required_cols - set(df_raw.columns)
         if missing:
             st.error(f"Missing required columns: {missing}. Found: {df_raw.columns.tolist()}")
@@ -24,7 +24,7 @@ if uploaded_file:
 
         # Preprocess
         df = df_raw.copy()
-        df.drop(columns=['timestamp'], inplace=True)
+        df.drop(columns=['date'], inplace=True)
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
         df.dropna(inplace=True)
 
@@ -115,7 +115,7 @@ if uploaded_file:
                 st.write(f"Top recommended products for user {selected_user}:")
                 st.dataframe(recommendations)
 
-        st.success("🎉 Hierarchical clustering complete and optimized!")
+        st.success("🎉 Hierarchical clustering complete and aligned with your dataset!")
 
     except Exception as e:
         st.error(f"❌ Failed to process file: {e}")
