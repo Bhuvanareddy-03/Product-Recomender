@@ -12,27 +12,22 @@ st.title("🔗 Product Recommendation using Hierarchical Clustering")
 
 uploaded_file = st.file_uploader("Upload your ratings CSV file", type=["csv"])
 if uploaded_file:
-    if uploaded_file.size > 5_000_000:
-        st.error("File too large. Please upload a smaller sample (under 5MB).")
-        st.stop()
-
     try:
         df_raw = pd.read_csv(uploaded_file)
         df = df_raw.copy()
         if df.shape[1] != 4:
-            st.error("Uploaded file must have exactly 4 columns: userId, productId, rating, timestamp.")
+            st.error("File must have 4 columns: userId, productId, rating, Time stamp")
             st.stop()
 
-        df.columns = ['userId', 'productId', 'rating', 'timestamp']
-        df.drop(columns=['timestamp'], inplace=True)
-        df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
-        df.dropna(inplace=True)
+      
 
-        df_sample = df if len(df) < 10000 else df.sample(n=10000, random_state=42)
-        matrix = df_sample.pivot_table(index='userId', columns='productId', values='rating').fillna(0)
+        # Smart sampling for large data
+        if len(df) > 20000:
+            df = df.sample(n=20000, random_state=42)
 
+        matrix = df.pivot_table(index='userId', columns='productId', values='rating').fillna(0)
         if matrix.shape[0] < 2 or matrix.shape[1] < 2:
-            st.error("Not enough data to perform clustering.")
+            st.error("Not enough data for clustering.")
             st.stop()
 
         scaler = StandardScaler()
@@ -46,19 +41,19 @@ if uploaded_file:
         pca_vis = PCA(n_components=2, random_state=42)
         vis_data = pca_vis.fit_transform(scaled_data)
 
-        # Hierarchical clustering
+        # Hierarchical Clustering
         hc = AgglomerativeClustering(n_clusters=5, linkage='ward')
         hc_labels = hc.fit_predict(reduced_data)
         matrix['Cluster_HC'] = hc_labels
 
-        # Silhouette score
+        # Silhouette Score
         try:
             hc_score = silhouette_score(reduced_data, hc_labels)
         except:
             hc_score = "N/A"
 
         # Visualization
-        st.subheader("🖼️ Cluster Visualization (Hierarchical)")
+        st.subheader("🖼️ Cluster Visualization")
         fig, ax = plt.subplots()
         unique_labels = np.unique(hc_labels)
         colors = plt.cm.get_cmap('tab10', len(unique_labels))
@@ -114,7 +109,8 @@ if uploaded_file:
                 st.write(f"Top recommended products for user {selected_user}:")
                 st.dataframe(recommendations)
 
-        st.success("🎉 Hierarchical clustering complete!")
+        st.success("🎉 Hierarchical clustering complete and optimized!")
 
     except Exception as e:
         st.error(f"❌ Failed to process file: {e}")
+
