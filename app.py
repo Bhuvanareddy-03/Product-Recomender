@@ -14,10 +14,7 @@ uploaded_file = st.file_uploader("Upload ratings_short.csv", type="csv")
 
 def show_data_overview(df):
     st.subheader("📊 Data Overview")
-    st.write(f"**Rows:** {df.shape[0]} | **Columns:** {df.shape[1]}")
-    st.write("**Column Names:**", list(df.columns))
-    st.write("**Missing Values:**")
-    st.dataframe(df.isnull().sum())
+    
     st.write("**Sample Data:**")
     st.dataframe(df.head())
 
