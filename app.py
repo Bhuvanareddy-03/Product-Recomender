@@ -16,7 +16,7 @@ if uploaded_file:
         df_raw = pd.read_csv(uploaded_file)
         df = df_raw.copy()
         if df.shape[1] != 4:
-            st.error("File must have 4 columns: userId, productId, rating, Time stamp")
+            st.error("File must have 4 columns: userId, productId, rating, timestamp")
             st.stop()
 
       
