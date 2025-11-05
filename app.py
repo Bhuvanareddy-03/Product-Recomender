@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics import silhouette_score
 
 st.set_page_config(page_title="🔗 Product Recommender", layout="centered")
 st.title("🔗 Scalable Product Recommendation using Hierarchical Clustering")
@@ -11,19 +12,28 @@ st.write("Upload your ratings CSV file")
 
 uploaded_file = st.file_uploader("Upload ratings_short.csv", type="csv")
 
+def show_data_overview(df):
+    st.subheader("📊 Data Overview")
+    st.write(f"**Rows:** {df.shape[0]} | **Columns:** {df.shape[1]}")
+    st.write("**Column Names:**", list(df.columns))
+    st.write("**Missing Values:**")
+    st.dataframe(df.isnull().sum())
+    st.write("**Sample Data:**")
+    st.dataframe(df.head())
+
 def load_and_cluster(df):
-    # Rename columns to standard format
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
 
     required_cols = {'userid', 'productid', 'rating'}
     if not required_cols.issubset(df.columns):
         st.error("❌ CSV must contain 'userid', 'productid', and 'rating' columns.")
-        return None
+        return None, None, None
 
     df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
     df.dropna(subset=['userid', 'productid', 'rating'], inplace=True)
 
-    # Sample for memory efficiency
+    show_data_overview(df)
+
     df_sample = df.sample(n=min(3000, len(df)), random_state=42)
     matrix = df_sample.pivot_table(index='userid', columns='productid', values='rating').fillna(0)
 
@@ -37,7 +47,13 @@ def load_and_cluster(df):
     hc_labels = hc.fit_predict(reduced_data)
     matrix['cluster_hc'] = hc_labels
 
-    return matrix
+    try:
+        score = silhouette_score(reduced_data, hc_labels)
+    except Exception as e:
+        score = None
+        st.warning(f"⚠️ Could not compute silhouette score: {e}")
+
+    return matrix, hc_labels, score
 
 def recommend_products(user_id, matrix):
     if user_id not in matrix.index:
@@ -59,17 +75,17 @@ if uploaded_file:
     try:
         df = pd.read_csv(uploaded_file)
         st.success(f"✅ File uploaded: {uploaded_file.name} — {df.shape[0]} rows")
-        matrix = load_and_cluster(df)
+        matrix, labels, score = load_and_cluster(df)
 
         if matrix is not None:
+            st.markdown(f"### 📈 Silhouette Score: `{score:.3f}`" if score is not None else "Silhouette score not available.")
             user_ids = matrix.index.tolist()
             selected_user = st.selectbox("Select User ID", user_ids)
 
             if st.button("Recommend Products"):
                 recommendations = recommend_products(selected_user, matrix)
                 st.subheader("Top Recommended Products:")
-                for product, score in recommendations.items():
-                    st.write(f"📦 Product {product} — Avg Rating: {score:.2f}")
+                for product, rating in recommendations.items():
+                    st.write(f"📦 Product {product} — Avg Rating: {rating:.2f}")
     except Exception as e:
         st.error(f"❌ Failed to process file: {e}")
-
