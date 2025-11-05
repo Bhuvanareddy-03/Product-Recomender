@@ -17,8 +17,14 @@ uploaded_file = st.file_uploader("Upload ratings_short.csv", type="csv")
 # Data overview
 def show_data_overview(df):
     st.subheader("📊 Data Overview")
+     # Show sample with readable timestamp if present
+    preview_cols = ['userid', 'productid', 'rating']
+    if 'time_stamp' in df.columns:
+        preview_cols.append('time_stamp')
     st.write("**Sample Data:**")
-    st.dataframe(df.head())
+    st.dataframe(df[preview_cols].head())
+
+    
 
 # Clustering pipeline
 def load_and_cluster(df):
