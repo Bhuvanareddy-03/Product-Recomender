@@ -23,10 +23,7 @@ if uploaded_file:
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
         df.dropna(inplace=True)
 
-        st.write("✅ File loaded successfully")
-        st.write("Shape:", df.shape)
-        st.write("Columns:", df.columns.tolist())
-        st.write(df.head())
+        
 
         # Step 2: Pivot user-product matrix
         df_sample = df.sample(n=min(10000, len(df)), random_state=42)
