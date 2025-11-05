@@ -115,7 +115,7 @@ if uploaded_file:
                 st.write(f"Top recommended products for user {selected_user}:")
                 st.dataframe(recommendations)
 
-        st.success("🎉 Hierarchical clustering complete and aligned with your dataset!")
+        st.success("🎉 Hierarchical clustering complete and optimized!")
 
     except Exception as e:
         st.error(f"❌ Failed to process file: {e}")
