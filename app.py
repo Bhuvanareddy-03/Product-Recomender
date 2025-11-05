@@ -13,12 +13,13 @@ st.title("🔗 Product Recommendation using Hierarchical Clustering")
 uploaded_file = st.file_uploader("Upload your ratings CSV file", type=["csv"])
 if uploaded_file:
     try:
-        # Load and clean column names
+        # Load and normalize column names
         df_raw = pd.read_csv(uploaded_file)
         df_raw.columns = [col.strip().lower() for col in df_raw.columns]
         required_cols = {'userid', 'productid', 'rating', 'timestamp'}
-        if not required_cols.issubset(set(df_raw.columns)):
-            st.error(f"Missing required columns. Found: {df_raw.columns.tolist()}")
+        missing = required_cols - set(df_raw.columns)
+        if missing:
+            st.error(f"Missing required columns: {missing}. Found: {df_raw.columns.tolist()}")
             st.stop()
 
         # Preprocess
