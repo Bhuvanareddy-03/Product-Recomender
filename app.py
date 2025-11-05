@@ -7,28 +7,24 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
-st.set_page_config(page_title="Hierarchical Clustering Recommender", layout="wide")
-st.title("🔗 Product Recommendation using Hierarchical Clustering")
+st.set_page_config(page_title="Scalable HC Recommender", layout="wide")
+st.title("🔗 Scalable Product Recommendation using Hierarchical Clustering")
 
 uploaded_file = st.file_uploader("Upload your ratings CSV file", type=["csv"])
 if uploaded_file:
     try:
-        # Load and normalize column names
-        df_raw = pd.read_csv(uploaded_file)
-        df_raw.columns = [col.strip().lower() for col in df_raw.columns]
-        required_cols = {'userid', 'productid', 'rating', 'date'}
-        missing = required_cols - set(df_raw.columns)
-        if missing:
-            st.error(f"Missing required columns: {missing}. Found: {df_raw.columns.tolist()}")
-            st.stop()
+        # Read in chunks and keep only required columns
+        chunks = pd.read_csv(uploaded_file, chunksize=100000)
+        df_list = []
+        for chunk in chunks:
+            chunk.columns = [col.strip().lower() for col in chunk.columns]
+            if {'userid', 'productid', 'rating', 'date'}.issubset(set(chunk.columns)):
+                df_list.append(chunk[['userid', 'productid', 'rating', 'date']])
+        df = pd.concat(df_list, ignore_index=True)
 
-        # Preprocess
-        df = df_raw.copy()
-        df.drop(columns=['date'], inplace=True)
+        # Clean and sample
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
         df.dropna(inplace=True)
-
-        # Smart sampling
         if len(df) > 20000:
             df = df.sample(n=20000, random_state=42)
 
@@ -115,7 +111,7 @@ if uploaded_file:
                 st.write(f"Top recommended products for user {selected_user}:")
                 st.dataframe(recommendations)
 
-        st.success("🎉 Hierarchical clustering complete and optimized!")
+        st.success("🎉 App now handles large data efficiently!")
 
     except Exception as e:
         st.error(f"❌ Failed to process file: {e}")
