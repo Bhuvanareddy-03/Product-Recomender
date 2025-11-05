@@ -8,7 +8,7 @@ from sklearn.metrics import silhouette_score
 
 # Page setup
 st.set_page_config(page_title="🔗 Product Recommender", layout="centered")
-st.title("🔗 Scalable Product Recommendation using Hierarchical Clustering")
+st.title("Product Recommendation using Hierarchical Clustering")
 st.write("Upload your ratings CSV file")
 
 # File upload
@@ -18,11 +18,13 @@ uploaded_file = st.file_uploader("Upload ratings_short.csv", type="csv")
 def show_data_overview(df):
     st.subheader("📊 Data Overview")
      # Show sample with readable timestamp if present
-    preview_cols = ['userid', 'productid', 'rating']
     if 'time_stamp' in df.columns:
-        preview_cols.append('time_stamp')
-    st.write("**Sample Data:**")
-    st.dataframe(df[preview_cols].head())
+        st.write("**Sample Data with Timestamp:**")
+        st.dataframe(df[['userid', 'productid', 'rating', 'time_stamp']].head())
+     else:
+        st.write("**Sample Data:**")
+        st.dataframe(df[['userid', 'productid', 'rating']].head())
+
 
     
 
