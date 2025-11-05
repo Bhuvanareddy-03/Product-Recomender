@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering, DBSCAN
@@ -40,13 +41,14 @@ if uploaded_file:
 
         scaler = StandardScaler()
         scaled_data = scaler.fit_transform(matrix)
-        n_components = min(30, scaled_data.shape[1])
-        if n_components < 2:
-            st.error("Not enough product features for PCA.")
-            st.stop()
 
-        pca = PCA(n_components=n_components, random_state=42)
+        # PCA for clustering
+        pca = PCA(n_components=min(30, scaled_data.shape[1]), random_state=42)
         reduced_data = pca.fit_transform(scaled_data)
+
+        # PCA for visualization
+        pca_vis = PCA(n_components=2, random_state=42)
+        vis_data = pca_vis.fit_transform(scaled_data)
 
         explained = pca.explained_variance_ratio_
         explained_df = pd.DataFrame({
@@ -79,7 +81,7 @@ if uploaded_file:
             scores['Cluster_HC'] = "N/A"
 
         try:
-            dbscan = DBSCAN(eps=3, min_samples=5)
+            dbscan = DBSCAN(eps=2.5, min_samples=5)
             db_labels = dbscan.fit_predict(reduced_data)
             matrix['Cluster_DBSCAN'] = db_labels
             if len(set(db_labels)) > 1 and -1 not in set(db_labels):
@@ -142,6 +144,25 @@ if uploaded_file:
 
         st.subheader("📈 Model Comparison")
         st.dataframe(pd.DataFrame(scores.items(), columns=['Model', 'Silhouette Score']))
+
+        # Visualization
+        st.subheader("🖼️ DBSCAN Cluster Visualization")
+        if 'Cluster_DBSCAN' in matrix.columns:
+            fig, ax = plt.subplots()
+            labels = matrix['Cluster_DBSCAN'].values
+            unique_labels = np.unique(labels)
+            colors = plt.cm.get_cmap('tab10', len(unique_labels))
+
+            for i, label in enumerate(unique_labels):
+                mask = labels == label
+                color = 'gray' if label == -1 else colors(i)
+                ax.scatter(vis_data[mask, 0], vis_data[mask, 1], label=f'Cluster {label}', alpha=0.6, c=[color])
+
+            ax.set_xlabel("PC1")
+            ax.set_ylabel("PC2")
+            ax.set_title("DBSCAN Clusters (PCA 2D)")
+            ax.legend()
+            st.pyplot(fig)
 
         st.success("🎉 All steps completed successfully!")
 
